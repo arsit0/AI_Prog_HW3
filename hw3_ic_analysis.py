@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib
+import seaborn as sns
 
 # 强制用非交互后端
 # 这样只保存图片，不会再弹 Figure 窗口
@@ -138,3 +139,86 @@ plt.savefig('hour_distribution.png', dpi=150)
 plt.close()
 
 print("任务2(b)完成，图像已保存为 hour_distribution.png")
+# =========================
+# 任务3 线路站点分析
+# =========================
+
+def analyze_route_stops(df, route_col='线路号', stops_col='ride_stops'):
+    """
+    计算各线路乘客的平均搭乘站点数及其标准差。
+    Parameters
+    ----------
+    df : pd.DataFrame  预处理后的数据集
+    route_col : str    线路号列名
+    stops_col : str    搭乘站点数列名
+    Returns
+    -------
+    pd.DataFrame  包含列：线路号、mean_stops、std_stops，按 mean_stops 降序排列
+    """
+    result = df.groupby(route_col)[stops_col].agg(['mean','std']).reset_index()
+    result.columns = ['线路号','mean_stops','std_stops']
+    result = result.sort_values(by='mean_stops', ascending=False).reset_index(drop=True)
+    return result
+
+# 先调用函数
+route_stats = analyze_route_stops(df)
+
+# 打印前10行
+print("\n任务3 各线路平均搭乘站点数及其标准差（前10行）：")
+print(route_stats.head(10))
+
+# 取均值最高的前15条线路
+top15_routes = route_stats.head(15).copy()
+
+# 为了让图里从上到下是高到低，这里倒一下
+plot_data = top15_routes.iloc[::-1].copy()
+
+# seaborn 画分类轴时，转成字符串更稳一点
+plot_data['线路号_str'] = plot_data['线路号'].astype(str)
+
+plt.figure(figsize=(12,8))
+
+# 这里把 hue 也设成线路号本身
+# 这样 palette='Blues_d' 就不会再报 FutureWarning
+ax = sns.barplot(
+    data=plot_data,
+    x='mean_stops',
+    y='线路号_str',
+    hue='线路号_str',
+    orient='h',
+    palette='Blues_d',
+    dodge=False,
+    legend=False
+)
+
+# 标准差误差棒补上
+ax.errorbar(
+    x=plot_data['mean_stops'],
+    y=np.arange(len(plot_data)),
+    xerr=plot_data['std_stops'],
+    fmt='none',
+    ecolor='black',
+    elinewidth=1,
+    capsize=0.3
+)
+
+plt.title('均值最高前15条线路的平均搭乘站点数', fontproperties=myfont)
+plt.xlabel('平均搭乘站点数', fontproperties=myfont)
+plt.ylabel('线路号', fontproperties=myfont)
+
+# x轴从0开始
+plt.xlim(left=0)
+
+# 不再手动 set_yticklabels 了
+# 直接把现有刻度标签逐个设字体，这样不会报 set_ticklabels 的 warning
+for label in ax.get_yticklabels():
+    label.set_fontproperties(myfont)
+
+for label in ax.get_xticklabels():
+    label.set_fontproperties(myfont)
+
+plt.tight_layout()
+plt.savefig('route_stops.png', dpi=150)
+plt.close()
+
+print("任务3完成，图像已保存为 route_stops.png")
