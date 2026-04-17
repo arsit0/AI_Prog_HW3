@@ -222,3 +222,57 @@ plt.savefig('route_stops.png', dpi=150)
 plt.close()
 
 print("任务3完成，图像已保存为 route_stops.png")
+# =========================
+# 任务4 高峰小时系数 PHF
+# =========================
+
+# 这里继续用刷卡类型=0的数据
+# 因为前面任务2统计上车刷卡量就是按这个口径来的
+# 题目这里说的是刷卡量，沿用这个口径更一致
+hourly_counts = df_bus.groupby('hour').size().reindex(range(24), fill_value=0)
+
+# 自动找出刷卡量最大的那个小时
+peak_hour = hourly_counts.idxmax()
+peak_hour_count = hourly_counts.max()
+
+# 只取高峰小时内的记录
+peak_df = df_bus[df_bus['hour'] == peak_hour].copy()
+
+# 下面要做分钟粒度聚合
+# floor('5min') 的意思是把时间往下归到所在的5分钟起点
+# 比如 09:17:36 会归到 09:15:00
+peak_df['time_5min'] = peak_df['交易时间'].dt.floor('5min')
+peak_df['time_15min'] = peak_df['交易时间'].dt.floor('15min')
+
+# 统计高峰小时内每个5分钟窗口的刷卡量
+count_5min = peak_df.groupby('time_5min').size().sort_index()
+max_5min_time = count_5min.idxmax()
+max_5min_count = count_5min.max()
+
+# PHF5 按题目公式直接算
+phf5 = peak_hour_count / (12 * max_5min_count)
+
+# 统计高峰小时内每个15分钟窗口的刷卡量
+count_15min = peak_df.groupby('time_15min').size().sort_index()
+max_15min_time = count_15min.idxmax()
+max_15min_count = count_15min.max()
+
+# PHF15 按题目公式直接算
+phf15 = peak_hour_count / (4 * max_15min_count)
+
+# 下面只是把时间格式整理成题目想要的样子
+peak_hour_start = f"{peak_hour:02d}:00"
+peak_hour_end = f"{(peak_hour + 1) % 24:02d}:00"
+
+max_5min_start = max_5min_time.strftime('%H:%M')
+max_5min_end = (max_5min_time + pd.Timedelta(minutes=5)).strftime('%H:%M')
+
+max_15min_start = max_15min_time.strftime('%H:%M')
+max_15min_end = (max_15min_time + pd.Timedelta(minutes=15)).strftime('%H:%M')
+
+print("\n任务4 高峰小时系数计算结果：")
+print(f"高峰小时：{peak_hour_start} ~ {peak_hour_end}，刷卡量：{peak_hour_count} 次")
+print(f"最大5分钟刷卡量（{max_5min_start}~{max_5min_end}）：{max_5min_count} 次")
+print(f"PHF5  = {peak_hour_count} / (12 × {max_5min_count}) = {phf5:.4f}")
+print(f"最大15分钟刷卡量（{max_15min_start}~{max_15min_end}）：{max_15min_count} 次")
+print(f"PHF15 = {peak_hour_count} / ( 4 × {max_15min_count}) = {phf15:.4f}")
