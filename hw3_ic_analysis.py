@@ -276,3 +276,42 @@ print(f"最大5分钟刷卡量（{max_5min_start}~{max_5min_end}）：{max_5min_
 print(f"PHF5  = {peak_hour_count} / (12 × {max_5min_count}) = {phf5:.4f}")
 print(f"最大15分钟刷卡量（{max_15min_start}~{max_15min_end}）：{max_15min_count} 次")
 print(f"PHF15 = {peak_hour_count} / ( 4 × {max_15min_count}) = {phf15:.4f}")
+# =========================
+# 任务5 线路驾驶员信息批量导出
+# =========================
+
+# 先筛出 1101 到 1120 这20条线路
+route_driver_df = df[(df['线路号'] >= 1101) & (df['线路号'] <= 1120)].copy()
+
+# 在程序根目录创建文件夹
+output_dir = '线路驾驶员信息'
+os.makedirs(output_dir, exist_ok=True)
+
+print("\n任务5 生成的文件路径：")
+
+# 按题目要求，固定输出20个文件
+for route in range(1101, 1121):
+    one_route = route_driver_df[route_driver_df['线路号'] == route].copy()
+
+    # 只保留 车辆编号 和 驾驶员编号
+    # 去重后再按车辆编号、驾驶员编号排一下，写出来更整齐
+    pair_df = one_route[['车辆编号', '驾驶员编号']].drop_duplicates().sort_values(
+        by=['车辆编号', '驾驶员编号']
+    )
+
+    # 驾驶员编号当前是 float，导出时转成整数样子，不写成 41.0 这种
+    if not pair_df.empty:
+        pair_df['驾驶员编号'] = pair_df['驾驶员编号'].astype(int)
+
+    file_path = os.path.join(output_dir, f'{route}.txt')
+
+    with open(file_path, 'w', encoding='utf-8') as f:
+        f.write(f"线路号: {route}\n")
+        f.write("车辆编号\t驾驶员编号\n")
+
+        for _, row in pair_df.iterrows():
+            f.write(f"{int(row['车辆编号'])}\t\t{int(row['驾驶员编号'])}\n")
+
+    print(file_path)
+
+print("任务5完成，20个线路文件已输出成功")
