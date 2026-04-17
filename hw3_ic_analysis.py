@@ -315,3 +315,105 @@ for route in range(1101, 1121):
     print(file_path)
 
 print("任务5完成，20个线路文件已输出成功")
+# =========================
+# 任务6 服务绩效排名与热力图
+# =========================
+
+# 这里继续用刷卡类型=0的数据
+# 和前面几个任务口径保持一致
+performance_df = df_bus.copy()
+
+# 分别统计四个维度的Top10
+driver_top10 = performance_df['驾驶员编号'].astype(int).value_counts().head(10)
+route_top10 = performance_df['线路号'].value_counts().head(10)
+station_top10 = performance_df['上车站点'].value_counts().head(10)
+vehicle_top10 = performance_df['车辆编号'].value_counts().head(10)
+
+# 先把排名打印出来
+print("\n任务6 排名统计结果：")
+
+print("\nTop 10 司机：")
+for i, (driver, cnt) in enumerate(driver_top10.items(), start=1):
+    print(f"Top{i}: 司机 {driver} -> {cnt} 人次")
+
+print("\nTop 10 线路：")
+for i, (route, cnt) in enumerate(route_top10.items(), start=1):
+    print(f"Top{i}: 线路 {route} -> {cnt} 人次")
+
+print("\nTop 10 上车站点：")
+for i, (station, cnt) in enumerate(station_top10.items(), start=1):
+    print(f"Top{i}: 上车站点 {station} -> {cnt} 人次")
+
+print("\nTop 10 车辆：")
+for i, (vehicle, cnt) in enumerate(vehicle_top10.items(), start=1):
+    print(f"Top{i}: 车辆 {vehicle} -> {cnt} 人次")
+
+# 这里先别直接用中文索引
+# 不然 seaborn 在内部 draw 的时候会先拿默认字体去画中文，警告就出来了
+heatmap_data = pd.DataFrame(
+    [
+        driver_top10.values,
+        route_top10.values,
+        station_top10.values,
+        vehicle_top10.values
+    ],
+    index=['driver', 'route', 'station', 'vehicle'],
+    columns=[f"Top{i}" for i in range(1, 11)]
+)
+
+plt.figure(figsize=(12, 6))
+
+ax = sns.heatmap(
+    heatmap_data,
+    annot=True,
+    fmt='d',
+    cmap='YlOrRd',
+    linewidths=0.5,
+    cbar=True
+)
+
+# 标题和副标题
+plt.title('服务绩效排名热力图', fontproperties=myfont, pad=18)
+plt.figtext(
+    0.5, 0.93,
+    '说明：每个单元格表示该维度对应Top名次实体的服务人次，具体实体编号见控制台排名输出',
+    ha='center',
+    fontproperties=myfont
+)
+
+# 坐标轴标签
+ax.set_xlabel('排名', fontproperties=myfont)
+ax.set_ylabel('维度', fontproperties=myfont)
+
+# x轴标签不旋转
+ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
+
+# 这里再手动把y轴改成中文
+# 这样 seaborn 前面不会先碰中文，warning 就没了
+ax.set_yticklabels(['司机', '线路', '上车站点', '车辆'], rotation=0)
+
+# 给刻度标签设中文字体
+for label in ax.get_xticklabels():
+    label.set_fontproperties(myfont)
+
+for label in ax.get_yticklabels():
+    label.set_fontproperties(myfont)
+
+plt.tight_layout(rect=[0, 0, 1, 0.90])
+plt.savefig('performance_heatmap.png', dpi=150, bbox_inches='tight')
+plt.close()
+
+print("\n任务6完成，图像已保存为 performance_heatmap.png")
+
+# 按题目要求给出不少于50字的结论说明
+conclusion = (
+    f"从热力图可以看出，不同维度的服务人次差异比较明显。"
+    f"其中司机Top1为{int(driver_top10.index[0])}，服务{int(driver_top10.iloc[0])}人次；"
+    f"线路Top1为{int(route_top10.index[0])}，服务{int(route_top10.iloc[0])}人次；"
+    f"上车站点Top1为{int(station_top10.index[0])}，服务{int(station_top10.iloc[0])}人次；"
+    f"车辆Top1为{int(vehicle_top10.index[0])}，服务{int(vehicle_top10.iloc[0])}人次。"
+    f"这说明客流和服务任务存在较明显的集中现象，部分线路、站点和车辆承担了更高的运营压力。"
+)
+
+print("\n任务6 结论说明：")
+print(conclusion)
